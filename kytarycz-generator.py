@@ -5,6 +5,15 @@ import bs4
 import pathvalidate
 import time
 import os.path
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--filter-author", type=str, help="Only process songs from specified author.")
+    return parser.parse_args()
+
+args = parse_args()
+filter_author = args.filter_author
 
 opts = webdriver.ChromeOptions()
 opts.add_argument("--headless=new")
@@ -17,36 +26,45 @@ base_url = "https://akordy.kytary.cz"
 driver.get("https://akordy.kytary.cz/songs")
 
 catalog = bs4.BeautifulSoup(driver.page_source, "html.parser")
-catalog_songs = catalog.select(".item > a")
+catalog_authors = catalog.select(".blocklist-block")
 
-for song in catalog_songs:    
-    print()
+for author in catalog_authors:   
+    author_name = author.select_one(".blocklist-header > a").text
     
-    song_url = base_url + song["href"]
-    print("Processing {song} ...".format(song=song_url))
+    if filter_author and filter_author not in author_name:
+        print("Skipping author {author} ...".format(author=author_name))
+        continue
     
-    try:
-        driver.get(song_url)
-        print("Downloaded {song} ...".format(song=song_url))
-        
-        pdf_filename = "{tit}.pdf".format(tit=driver.title).replace(" | Akordy", "")
-        pdf_filename = pathvalidate.sanitize_filename(pdf_filename)
-        
-        if os.path.isfile(pdf_filename):
-            print("PDF file for song {song} already exists, skipping ...".format(song=song_url))
-            continue
-        
-        pdf = driver.print_page()
-        print("Printed {song} to PDF ...".format(song=song_url))
-
-        with open(pdf_filename, 'wb') as file:
-            file.write(base64.b64decode(pdf))
+    songs = author.select(".item > a")
+    
+    for song in songs:
+        print()
             
-        print("Saved {song} to file ...".format(song=song_url))
+        song_url = base_url + song["href"]
+        print("Processing {song} ...".format(song=song_url))
         
-    except Exception as e:
-        print(e)
-    
-    time.sleep(3)
+        try:
+            driver.get(song_url)
+            print("Downloaded {song} ...".format(song=song_url))
+            
+            pdf_filename = "{tit}.pdf".format(tit=driver.title).replace(" | Akordy", "")
+            pdf_filename = pathvalidate.sanitize_filename(pdf_filename)
+            
+            if os.path.isfile(pdf_filename):
+                print("PDF file for song {song} already exists, skipping ...".format(song=song_url))
+                continue
+            
+            pdf = driver.print_page()
+            print("Printed {song} to PDF ...".format(song=song_url))
+
+            with open(pdf_filename, 'wb') as file:
+                file.write(base64.b64decode(pdf))
+                
+            print("Saved {song} to file ...".format(song=song_url))
+            
+        except Exception as e:
+            print(e)
+        
+        time.sleep(3)
 
 driver.quit()
