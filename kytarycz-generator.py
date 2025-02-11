@@ -7,12 +7,18 @@ import time
 import os.path
 import argparse
 
-def parse_args():
+def create_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--filter-author", type=str, help="Only process songs from specified author.")
-    return parser.parse_args()
+    parser.add_argument("--filter-author", type=str, help="only process songs from specified author")
+    return parser
 
-args = parse_args()
+args_parser = create_args()
+args = args_parser.parse_args()
+
+if args.help:
+    args_parser.print_usage()
+    exit()
+
 filter_author = args.filter_author
 
 opts = webdriver.ChromeOptions()

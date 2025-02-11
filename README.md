@@ -11,3 +11,5 @@ Python 3 is required for this to work.
 2. Open command line and navigate to arbitrary folder where you want to store your PDF files.
 3. Run `python "<path-to-kytarycz-generator.py>"`
 4. Wait.
+
+Run `python "<path-to-kytarycz-generator.py>" --help` to see all available switches and options.
