@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.print_page_options import PrintOptions
 
 import base64
@@ -13,6 +14,9 @@ base_url = "https://akordy.kytary.cz"
 def create_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--filter-author", type=str, help="only process songs from specified author")
+    parser.add_argument("--columns", type=int, help="specify number of columns", default=2)
+    parser.add_argument("--scale", type=float, help="scale text up or down", default=1.0)
+    parser.add_argument("--print-chords", action="store_true", help="also print list of used chords")
     return parser
 
 def initialize_driver():
@@ -26,7 +30,7 @@ def construct_pdf_filename(author_name: str, song_name: str):
     pdf_filename = pathvalidate.sanitize_filename(pdf_filename)
     return pdf_filename
 
-def process_songs(driver: webdriver.Chrome, author: dict):
+def process_songs(driver: webdriver.Chrome, author: dict, columns: int, scale: float, print_chords:bool):
     author_html = author["html"]
     author_name = author["name"]
     songs = author_html.select(".item > a")
@@ -44,6 +48,11 @@ def process_songs(driver: webdriver.Chrome, author: dict):
         
         try:
             driver.get(song_url)
+            driver.execute_script("ChEngine.setColumnNum({col}, !0)".format(col=columns))
+            
+            if not print_chords:
+                driver.execute_script("[...document.querySelectorAll(\"div[id^='used-chords']\")].forEach(ele => ele.style.display = \"none\")")
+            
             print("Downloaded {song} ...".format(song=song_name))
             
             pdf_opts = PrintOptions()
@@ -52,6 +61,8 @@ def process_songs(driver: webdriver.Chrome, author: dict):
             pdf_opts.margin_top = 0.7
             pdf_opts.margin_left = 0.45
             pdf_opts.margin_right = 0.45
+            pdf_opts.scale = scale
+            pdf_opts.shrink_to_fit = True
             
             pdf = driver.print_page(pdf_opts)
             print("Printed {song} to PDF ...".format(song=song_name))
@@ -83,6 +94,9 @@ def main():
     args_parser = create_args()
     args = args_parser.parse_args()
     filter_author = args.filter_author
+    columns = args.columns
+    scale = args.scale
+    print_chords = args.print_chords
     driver = initialize_driver()
 
     # Get full catalog.
@@ -95,8 +109,7 @@ def main():
             print("Skipping author {author} ...".format(author=author_name))
         else:
             print("Processing author {author} ...".format(author=author_name))
-            process_songs(driver, author)
-
+            process_songs(driver, author, columns, scale, print_chords)
 
     driver.quit()
 
